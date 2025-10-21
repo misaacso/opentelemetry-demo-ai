@@ -1,8 +1,11 @@
 {
   "devDependencies": {
-    "markdown-toc": "^1.2.0",
-    "markdownlint-cli": "0.45.0",
     "@kt3k/license-checker": "^3.2.2",
-    "@umbrelladocs/linkspector": "^0.4.7"
+    "@umbrelladocs/linkspector": "^0.4.7",
+    "markdown-toc": "^1.2.0",
+    "markdownlint-cli": "0.45.0"
+  },
+  "dependencies": {
+    "lucide-react": "^0.546.0"
   }
 }
