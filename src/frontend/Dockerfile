@@ -40,6 +40,7 @@ COPY ./src/frontend/package-lock.json package-lock.json
 
 RUN npm ci --omit=dev
 
+
 # -----------------------------------------------------------------------------
 
 FROM gcr.io/distroless/nodejs22-debian12:nonroot

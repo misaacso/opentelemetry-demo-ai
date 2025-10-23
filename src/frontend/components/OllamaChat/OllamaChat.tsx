@@ -1,15 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Minimize2, Send, Settings } from 'lucide-react';
 
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export default function OllamaChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [model, setModel] = useState('tinyllama');
-  const messagesEndRef = useRef(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -18,6 +23,7 @@ export default function OllamaChat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;

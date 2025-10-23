@@ -1,0 +1,109 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-data
+  namespace: otel-demo  # Change to your namespace
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi  # Adjust based on model size (tinyllama ~1GB, but allow room)
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: otel-demo  # Change to your namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      containers:
+      - name: ollama
+        image: ollama/ollama:latest
+        ports:
+        - containerPort: 11434
+          name: http
+        env:
+        - name: OLLAMA_HOST
+          value: "0.0.0.0:11434"
+        volumeMounts:
+        - name: ollama-data
+          mountPath: /root/.ollama
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        # Readiness probe to check if Ollama is ready
+        readinessProbe:
+          httpGet:
+            path: /api/version
+            port: 11434
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        # Liveness probe to restart if Ollama crashes
+        livenessProbe:
+          httpGet:
+            path: /api/version
+            port: 11434
+          initialDelaySeconds: 60
+          periodSeconds: 30
+      volumes:
+      - name: ollama-data
+        persistentVolumeClaim:
+          claimName: ollama-data
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  namespace: otel-demo  # Change to your namespace
+spec:
+  selector:
+    app: ollama
+  ports:
+  - port: 11434
+    targetPort: 11434
+    protocol: TCP
+    name: http
+  type: ClusterIP
+
+---
+# Job to pull the tinyllama model after Ollama starts
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ollama-pull-tinyllama
+  namespace: otel-demo # Change to your namespace
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: model-pull
+        image: curlimages/curl:latest
+        command:
+        - sh
+        - -c
+        - |
+          echo "Waiting for Ollama to be ready..."
+          until curl -s http://ollama:11434/api/version > /dev/null; do
+            echo "Waiting for Ollama service..."
+            sleep 5
+          done
+          echo "Ollama is ready, pulling tinyllama model..."
+          curl -X POST http://ollama:11434/api/pull -d '{"name":"tinyllama"}'
+          echo "Model pull initiated"

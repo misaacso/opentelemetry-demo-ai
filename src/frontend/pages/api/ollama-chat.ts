@@ -9,16 +9,15 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Get Ollama URL from environment variable or use in-cluster service
-  //const ollamaUrl = process.env.OLLAMA_URL || 'http://ollama:11434';
   const ollamaUrl = process.env.OLLAMA_URL || 'http://192.168.1.233:11434';
+  //const ollamaUrl = 'http://192.168.1.233:11434';
 
+  console.log('Connecting to Ollama URL:', ollamaUrl);
+  
   try {
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req.body),
     });
 
@@ -27,12 +26,19 @@ export default async function handler(
     }
 
     const data = await response.json();
-    res.status(200).json(data);
-  } catch (error) {
+
+    // Normalize response shape for frontend
+    const content =
+      data?.message?.content ||
+      data?.message ||
+      data?.response ||
+      JSON.stringify(data);
+
+    res.status(200).json({ message: { content } });
+  } catch (error: any) {
     console.error('Ollama proxy error:', error);
-    res.status(500).json({ 
-      error: 'Failed to connect to Ollama',
-      message: error.message 
+    res.status(500).json({
+      message: { content: `Failed to connect to Ollama: ${error.message}` },
     });
   }
 }

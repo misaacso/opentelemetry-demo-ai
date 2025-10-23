@@ -11989,6 +11989,8 @@ spec:
               value: http://localhost:8080/otlp-http/v1/traces
             - name: OTEL_RESOURCE_ATTRIBUTES
               value: service.name=$(OTEL_SERVICE_NAME),service.namespace=opentelemetry-demo,service.version=2.0.2
+            - name: OLLAMA_URL
+              value: "http://192.168.1.233:11434"
           resources:
             limits:
               memory: 250Mi
