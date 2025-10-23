@@ -8,7 +8,6 @@ export default function OllamaChat() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [ollamaUrl, setOllamaUrl] = useState('http://192.168.1.233:11434');
   const [model, setModel] = useState('tinyllama');
   const messagesEndRef = useRef(null);
 
@@ -29,7 +28,8 @@ export default function OllamaChat() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${ollamaUrl}/api/chat`, {
+      // Use the backend proxy API route
+      const response = await fetch('/api/ollama-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -42,7 +42,8 @@ export default function OllamaChat() {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
@@ -55,7 +56,7 @@ export default function OllamaChat() {
     } catch (err) {
       const errorMessage = {
         role: 'assistant',
-        content: `Error connecting to Ollama server: ${err.message}. Please check your connection and settings.`
+        content: `Error connecting to Ollama: ${err.message}`
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -74,7 +75,8 @@ export default function OllamaChat() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-50"
+        aria-label="Open chat"
       >
         <MessageSquare size={24} />
       </button>
@@ -82,7 +84,10 @@ export default function OllamaChat() {
   }
 
   return (
-    <div className={`fixed ${isMinimized ? 'bottom-6 right-6' : 'bottom-6 right-6'} w-96 bg-white rounded-lg shadow-2xl flex flex-col transition-all ${isMinimized ? 'h-14' : 'h-[600px]'}`}>
+    <div 
+      className={`fixed bottom-6 right-6 w-96 bg-white rounded-lg shadow-2xl flex flex-col transition-all z-50 ${isMinimized ? 'h-14' : 'h-[600px]'}`}
+      style={{ maxWidth: 'calc(100vw - 3rem)' }}
+    >
       {/* Header */}
       <div className="bg-blue-600 text-white px-4 py-3 rounded-t-lg flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -93,18 +98,21 @@ export default function OllamaChat() {
           <button
             onClick={() => setShowSettings(!showSettings)}
             className="hover:bg-blue-700 p-1 rounded transition-colors"
+            aria-label="Settings"
           >
             <Settings size={18} />
           </button>
           <button
             onClick={() => setIsMinimized(!isMinimized)}
             className="hover:bg-blue-700 p-1 rounded transition-colors"
+            aria-label={isMinimized ? "Maximize" : "Minimize"}
           >
             <Minimize2 size={18} />
           </button>
           <button
             onClick={() => setIsOpen(false)}
             className="hover:bg-blue-700 p-1 rounded transition-colors"
+            aria-label="Close"
           >
             <X size={18} />
           </button>
@@ -116,18 +124,6 @@ export default function OllamaChat() {
           {/* Settings Panel */}
           {showSettings && (
             <div className="p-4 bg-gray-50 border-b">
-              <div className="mb-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ollama Server URL
-                </label>
-                <input
-                  type="text"
-                  value={ollamaUrl}
-                  onChange={(e) => setOllamaUrl(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  placeholder="http://192.168.1.100:11434"
-                />
-              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Model
@@ -137,8 +133,11 @@ export default function OllamaChat() {
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  placeholder="llama2"
+                  placeholder="tinyllama"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Connected via backend to Ollama pod in cluster
+                </p>
               </div>
             </div>
           )}
@@ -149,7 +148,7 @@ export default function OllamaChat() {
               <div className="text-center text-gray-500 mt-8">
                 <MessageSquare size={48} className="mx-auto mb-2 opacity-50" />
                 <p>Start a conversation with Ollama</p>
-                <p className="text-sm mt-1">Connected to: {ollamaUrl}</p>
+                <p className="text-sm mt-1">Model: {model}</p>
               </div>
             )}
             
@@ -186,7 +185,7 @@ export default function OllamaChat() {
           </div>
 
           {/* Input */}
-          <div className="p-4 border-t">
+          <div className="p-4 border-t bg-white rounded-b-lg">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -201,6 +200,7 @@ export default function OllamaChat() {
                 onClick={sendMessage}
                 disabled={isLoading || !input.trim()}
                 className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors"
+                aria-label="Send message"
               >
                 <Send size={20} />
               </button>
