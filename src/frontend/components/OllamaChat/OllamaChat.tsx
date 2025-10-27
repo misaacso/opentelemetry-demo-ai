@@ -24,17 +24,15 @@ export default function OllamaChat() {
     scrollToBottom();
   }, [messages]);
 
-
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userMessage = { role: 'user', content: input };
+    const userMessage: Message = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
 
     try {
-      // Use the backend proxy API route
       const response = await fetch('/api/ollama-chat', {
         method: 'POST',
         headers: {
@@ -49,20 +47,20 @@ export default function OllamaChat() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new Error((errorData as any).message || `HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      const assistantMessage = {
+      const assistantMessage: Message = {
         role: 'assistant',
         content: data.message.content
       };
       
       setMessages(prev => [...prev, assistantMessage]);
     } catch (err) {
-      const errorMessage = {
+      const errorMessage: Message = {
         role: 'assistant',
-        content: `Error connecting to Ollama: ${err.message}`
+        content: `Error connecting to Ollama: ${err instanceof Error ? err.message : 'Unknown error'}`
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -70,7 +68,7 @@ export default function OllamaChat() {
     }
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -142,7 +140,7 @@ export default function OllamaChat() {
                   placeholder="tinyllama"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Connected via backend to Ollama pod in cluster
+                  Connected via backend to Ollama server
                 </p>
               </div>
             </div>
